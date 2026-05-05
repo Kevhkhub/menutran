@@ -2,16 +2,31 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, Utensils, Loader2, AlertCircle, RefreshCw, ChevronRight, History, CreditCard, X, ChevronLeft, Copy, Check, ShoppingCart, Settings, Trash2 } from 'lucide-react';
 
 // --- Configuration ---
-const apiKey = ""; // 請在此處填入您的 API Key
+// 優化環境變量讀取方式，確保在不同編譯環境下的兼容性
+const getApiKey = () => {
+  try {
+    // 優先讀取 Vite 的環境變量
+    return import.meta.env.VITE_GEMINI_API_KEY || "";
+  } catch (e) {
+    // 如果環境不支援 import.meta，則回傳空字串
+    return "";
+  }
+};
+
+const apiKey = getApiKey(); 
 const MODEL_NAME = "gemini-2.5-flash-preview-09-2025";
 const APP_NAME = "你真識食";
-const VERSION = "v1.4.0";
+const VERSION = "v1.4.2"; // 修復編譯錯誤後的版本
 const AUTHOR = "Kevin";
 
 // --- Helpers ---
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const callGeminiVision = async (base64Image) => {
+  if (!apiKey) {
+    throw new Error("找不到 API Key，請在 GitHub Secrets 或設定中配置 VITE_GEMINI_API_KEY");
+  }
+
   for (let i = 0; i < 5; i++) {
     try {
       if (i > 0) await sleep(Math.pow(2, i) * 1000);
@@ -28,10 +43,15 @@ const callGeminiVision = async (base64Image) => {
           generationConfig: { responseMimeType: "application/json" }
         })
       });
+      
+      if (!response.ok) throw new Error(`API 請求失敗: ${response.status}`);
+      
       const data = await response.json();
       const content = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text);
       return content.items || [];
-    } catch (e) { if (i === 4) throw e; }
+    } catch (e) { 
+      if (i === 4) throw e; 
+    }
   }
 };
 
@@ -94,7 +114,7 @@ export default function App() {
       setActivePage(0);
       setView('result');
     } catch (err) {
-      setError("處理失敗，請檢查 API Key 或網絡。");
+      setError(err.message || "處理失敗，請檢查 API Key 或網絡。");
       setView('home');
     }
   };
@@ -139,7 +159,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans flex flex-col">
-      {/* Header */}
+      {/* 標頭 */}
       <header className="bg-white border-b px-4 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
           <div className="bg-blue-600 p-2 rounded-xl shadow-blue-100 shadow-lg">
@@ -380,7 +400,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Persistent Order FAB */}
+      {/* 懸浮點餐按鈕 */}
       {selectedItems.length > 0 && view !== 'order' && (
         <div className="fixed bottom-24 right-4 z-40">
           <button 
@@ -395,18 +415,24 @@ export default function App() {
         </div>
       )}
 
-      {/* Bottom Nav */}
+      {/* 底部導覽 */}
       <nav className="fixed bottom-0 left-0 right-0 bg-white/95 border-t px-8 py-4 flex justify-around z-30">
         <button onClick={() => setView('home')} className={`flex flex-col items-center ${view === 'home' ? 'text-blue-600' : 'text-slate-300'}`}><Camera size={24} /><span className="text-[10px] font-bold">掃描</span></button>
         <button onClick={() => setView('history')} className={`flex flex-col items-center ${view === 'history' ? 'text-blue-600' : 'text-slate-300'}`}><History size={24} /><span className="text-[10px] font-bold">歷史</span></button>
         <button onClick={() => setView('settings')} className={`flex flex-col items-center ${view === 'settings' ? 'text-blue-600' : 'text-slate-300'}`}><CreditCard size={24} /><span className="text-[10px] font-bold">匯率</span></button>
       </nav>
 
-      {/* Footer */}
+      {/* 頁腳 */}
       <footer className="bg-slate-50 pt-8 pb-24 text-center">
         <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{APP_NAME}</p>
         <p className="text-[10px] text-slate-400 font-bold mt-1">Version {VERSION} | Author: <span className="text-blue-600">{AUTHOR}</span></p>
       </footer>
+
+      {/* 全域樣式修正（替代 index.css 以確保在預覽環境運行） */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
     </div>
   );
 }
