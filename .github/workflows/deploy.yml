@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
+          # 移除了 cache: 'npm'，因為如果沒有 package-lock.json 檔案，GitHub Actions 會報錯
 
       - name: Install dependencies
         run: npm install
