@@ -9,6 +9,10 @@ permissions:
   pages: write
   id-token: write
 
+# 設定全域環境變數以使用最新的 Node.js 24 執行環境
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,8 +23,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
-          # 移除了 cache: 'npm'，因為如果沒有 package-lock.json 檔案，GitHub Actions 會報錯
+          node-version: 24 # 更新至 Node 24 以消除棄用警告
 
       - name: Install dependencies
         run: npm install
